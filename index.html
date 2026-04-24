@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Canlı Döviz Pro</title>
+<title>Pro Trading Panel</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -10,150 +10,158 @@
 body{
   margin:0;
   font-family: Arial;
-  background:#0b1220;
+  background:#0a0f1f;
   color:white;
-  text-align:center;
 }
 
+/* TOP BAR */
 .header{
-  padding:20px;
+  padding:15px;
+  text-align:center;
   font-size:22px;
-  font-weight:bold;
+  color:#00ffcc;
   background:#111a2e;
+}
+
+/* LAYOUT */
+.container{
+  display:flex;
+  height:calc(100vh - 60px);
+}
+
+/* LEFT MARKET LIST */
+.market{
+  width:35%;
+  background:#0f1629;
+  overflow:auto;
+  border-right:1px solid #222;
+}
+
+.item{
+  padding:15px;
+  border-bottom:1px solid #1f2a44;
+  cursor:pointer;
+}
+
+.item:hover{
+  background:#16213e;
+}
+
+.symbol{
+  font-weight:bold;
+}
+
+.price{
   color:#00ffcc;
 }
 
-table{
-  width:90%;
-  max-width:650px;
-  margin:20px auto;
-  border-collapse:collapse;
-  background:#16213e;
-  border-radius:10px;
-  overflow:hidden;
-}
-
-th, td{
-  padding:12px;
-  border-bottom:1px solid #222;
-}
-
-th{
-  background:#111a2e;
-}
-
-button{
-  padding:10px 20px;
-  background:#00ffcc;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-  font-weight:bold;
-  margin:10px;
+/* RIGHT CHART */
+.right{
+  flex:1;
+  padding:20px;
 }
 
 canvas{
-  width:90%;
-  max-width:650px;
-  margin:20px auto;
-  display:block;
-  background:#16213e;
+  background:#111a2e;
   border-radius:12px;
   padding:10px;
 }
 
-.alarm{
-  margin:10px;
+/* BUY SELL */
+.box{
+  margin-top:10px;
+  display:flex;
+  justify-content:space-around;
 }
+
+.buy{color:#00ff99;}
+.sell{color:#ff4d4d;}
 </style>
 </head>
 
 <body>
 
-<div class="header">💱 Canlı Finans Pro</div>
+<div class="header">📊 PRO TRADING PANEL (Midas Style)</div>
 
-<button onclick="getData()">🔄 Yenile</button>
+<div class="container">
 
-<div class="alarm">
-  🔔 Alarm (USD/TRY üst sınır):
-  <input id="limit" type="number" placeholder="örn 45">
-  <button onclick="setAlarm()">Ayarla</button>
+  <div class="market" id="market"></div>
+
+  <div class="right">
+    <h3 id="title">Seçim Yap</h3>
+
+    <div class="box">
+      <div class="buy">ALIŞ: <span id="buy">-</span></div>
+      <div class="sell">SATIŞ: <span id="sell">-</span></div>
+    </div>
+
+    <canvas id="chart"></canvas>
+  </div>
+
 </div>
-
-<table>
-<tr><th>Enstrüman</th><th>Değer</th></tr>
-
-<tr><td>USD / TRY</td><td id="usd">-</td></tr>
-<tr><td>EUR / USD</td><td id="eur">-</td></tr>
-<tr><td>GBP / USD</td><td id="gbp">-</td></tr>
-<tr><td>BTC / USD</td><td id="btc">-</td></tr>
-<tr><td>ALTIN (XAU)</td><td id="gold">-</td></tr>
-</table>
-
-<canvas id="chart"></canvas>
 
 <script>
 let chart;
 let history = [];
-let alarmLimit = null;
+let selected = "USDTRY";
 
-function setAlarm(){
-  alarmLimit = document.getElementById("limit").value;
-  alert("Alarm ayarlandı: " + alarmLimit);
+const markets = [
+  {name:"USD/TRY", base:"USD", quote:"TRY"},
+  {name:"EUR/USD", base:"EUR", quote:"USD"},
+  {name:"GBP/USD", base:"GBP", quote:"USD"},
+  {name:"BTC/USD", base:"BTC", quote:"USD"},
+  {name:"ETH/USD", base:"ETH", quote:"USD"},
+  {name:"JPY/USD", base:"JPY", quote:"USD"}
+];
+
+async function loadMarkets(){
+  const res = await fetch("https://open.er-api.com/v6/latest/USD");
+  const data = await res.json();
+
+  let html = "";
+
+  markets.forEach(m => {
+    let rate = data.rates[m.base] || (1 / data.rates[m.quote]);
+
+    let price = rate.toFixed(4);
+    let buy = (price * 1.002).toFixed(4);
+    let sell = (price * 0.998).toFixed(4);
+
+    html += `
+      <div class="item" onclick="selectMarket('${m.name}',${price})">
+        <div class="symbol">${m.name}</div>
+        <div class="price">${price}</div>
+        <small class="buy">B:${buy} S:${sell}</small>
+      </div>
+    `;
+  });
+
+  document.getElementById("market").innerHTML = html;
 }
 
-async function getData(){
-  try{
-    // Döviz
-    const res = await fetch("https://open.er-api.com/v6/latest/USD");
-    const data = await res.json();
+function selectMarket(name, price){
+  document.getElementById("title").innerText = name;
 
-    // Bitcoin (basit fake API)
-    const btc = await fetch("https://api.coindesk.com/v1/bpi/currentprice/USD.json");
-    const btcData = await btc.json();
+  document.getElementById("buy").innerText = (price * 1.002).toFixed(4);
+  document.getElementById("sell").innerText = (price * 0.998).toFixed(4);
 
-    const btcPrice = btcData.bpi.USD.rate_float;
-
-    // Altın (yaklaşık API)
-    const goldRes = await fetch("https://api.metals.live/v1/spot/gold");
-    const goldData = await goldRes.json();
-
-    const goldPrice = goldData[0][1];
-
-    // UI
-    document.getElementById("usd").innerText = data.rates.TRY;
-    document.getElementById("eur").innerText = data.rates.EUR;
-    document.getElementById("gbp").innerText = data.rates.GBP;
-    document.getElementById("btc").innerText = btcPrice.toFixed(2);
-    document.getElementById("gold").innerText = goldPrice;
-
-    // Alarm kontrol
-    if(alarmLimit && data.rates.TRY > alarmLimit){
-      alert("🚨 USD/TRY alarm tetiklendi: " + data.rates.TRY);
-      alarmLimit = null;
-    }
-
-    updateChart(data.rates.TRY);
-
-  } catch(e){
-    console.log(e);
-  }
+  updateChart(price);
 }
 
 function updateChart(value){
   history.push(Number(value));
-  if(history.length > 10) history.shift();
+  if(history.length > 20) history.shift();
 
   const ctx = document.getElementById("chart").getContext("2d");
 
   if(chart) chart.destroy();
 
-  chart = new Chart(ctx, {
+  chart = new Chart(ctx,{
     type:"line",
     data:{
       labels: history.map((_,i)=>i+1),
       datasets:[{
-        label:"USD/TRY",
+        label:"Fiyat",
         data:history,
         borderColor:"#00ffcc",
         tension:0.3
@@ -162,8 +170,8 @@ function updateChart(value){
   });
 }
 
-getData();
-setInterval(getData, 5000);
+loadMarkets();
+setInterval(loadMarkets,5000);
 </script>
 
 </body>
