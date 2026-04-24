@@ -2,42 +2,56 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Döviz Takip</title>
+<title>Döviz Pro</title>
 
 <style>
 body{
+  margin:0;
   font-family: Arial;
-  background:#0f0f0f;
+  background: linear-gradient(135deg,#0f0f0f,#1c1c1c);
   color:white;
   text-align:center;
-  padding:20px;
 }
-h1{ color:#00ffcc; }
 
-.box{
-  background:#1e1e1e;
-  margin:10px auto;
+h1{
+  margin-top:20px;
+  color:#00ffcc;
+}
+
+.container{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  margin-top:20px;
+}
+
+.card{
+  background:#222;
+  width:250px;
   padding:15px;
-  width:220px;
-  border-radius:10px;
+  margin:10px;
+  border-radius:12px;
+  box-shadow:0 0 10px #000;
+  font-size:18px;
 }
 
 button{
+  margin-top:20px;
   padding:10px 20px;
-  background:#00ffcc;
   border:none;
   border-radius:8px;
-  cursor:pointer;
+  background:#00ffcc;
   font-weight:bold;
+  cursor:pointer;
 }
 </style>
 </head>
 
 <body>
 
-<h1>💱 Döviz Takip</h1>
+<h1>💱 Döviz Pro</h1>
 
-<div id="data">Yükleniyor...</div>
+<div class="container" id="data">Yükleniyor...</div>
 
 <button onclick="getData()">🔄 Yenile</button>
 
@@ -50,17 +64,17 @@ async function getData(){
     const data = await res.json();
 
     box.innerHTML = `
-      <div class="box">EUR → ${data.rates.EUR}</div>
-      <div class="box">GBP → ${data.rates.GBP}</div>
-      <div class="box">TRY → ${data.rates.TRY}</div>
+      <div class="card">💵 USD → TRY: ${data.rates.TRY}</div>
+      <div class="card">💶 EUR → USD: ${data.rates.EUR}</div>
+      <div class="card">💷 GBP → USD: ${data.rates.GBP}</div>
     `;
-  } catch (e) {
-    box.innerHTML = "Hata oluştu 😢";
-    console.log(e);
+  } catch(e){
+    box.innerHTML = "Hata 😢";
   }
 }
 
 getData();
+setInterval(getData, 10000);
 </script>
 
 </body>
