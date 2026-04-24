@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Canlı Küresel Borsa & Döviz Paneli</title>
+<title>Baydınsal Trading Sim</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -10,14 +10,12 @@
 body{
   margin:0;
   font-family:Arial;
-  background:#f5f7fb;
-  color:#111;
+  background:#f4f6fb;
 }
 
 .header{
-  padding:15px;
+  padding:12px;
   text-align:center;
-  font-size:20px;
   font-weight:bold;
   background:white;
   border-bottom:1px solid #ddd;
@@ -28,17 +26,11 @@ body{
   height:calc(100vh - 60px);
 }
 
-.sidebar{
+.left{
   width:35%;
-  overflow:auto;
   background:white;
   border-right:1px solid #ddd;
-}
-
-.section-title{
-  padding:10px;
-  font-weight:bold;
-  background:#f0f2f5;
+  overflow:auto;
 }
 
 .item{
@@ -47,136 +39,190 @@ body{
   cursor:pointer;
 }
 
-.item:hover{
-  background:#f0f7ff;
-}
+.item:hover{background:#eef3ff;}
 
-.symbol{
-  font-weight:bold;
-}
-
-.price{
-  color:#0aa;
-}
+.symbol{font-weight:bold;}
+.price{color:#0b57ff;}
 
 .right{
   flex:1;
-  padding:20px;
+  padding:15px;
 }
 
 canvas{
   background:white;
   border-radius:10px;
-  padding:10px;
   border:1px solid #ddd;
 }
 
 .box{
-  margin:10px 0;
   display:flex;
   justify-content:space-around;
+  margin:10px 0;
+  font-weight:bold;
 }
 
-.buy{color:green;}
-.sell{color:red;}
+button{
+  padding:10px;
+  margin:5px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.buyBtn{background:green;color:white;}
+.sellBtn{background:red;color:white;}
+
+.portfolio{
+  margin-top:10px;
+  background:#fff;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #ddd;
+}
 </style>
 </head>
 
 <body>
 
-<div class="header">📊 CANLI KÜRESEL BORSA + DÖVİZ PANELİ</div>
+<div class="header">📊 Baydınsal Trading Simulator</div>
 
 <div class="container">
 
-<div class="sidebar" id="sidebar"></div>
+<div class="left" id="list"></div>
 
 <div class="right">
-<h3 id="title">Seçim Yap</h3>
+
+<h3 id="title">Seç</h3>
 
 <div class="box">
-<div class="buy">ALIŞ: <span id="buy">-</span></div>
-<div class="sell">SATIŞ: <span id="sell">-</span></div>
+<div>Fiyat: <span id="price">-</span></div>
+<div>Bakiye: $<span id="balance">10000</span></div>
 </div>
+
+<button class="buyBtn" onclick="buy()">AL</button>
+<button class="sellBtn" onclick="sell()">SAT</button>
 
 <canvas id="chart"></canvas>
+
+<div class="portfolio" id="portfolio">
+<h4>📦 Portföy</h4>
+<div id="plist"></div>
 </div>
 
+</div>
 </div>
 
 <script>
-let chart;
+
+let balance = 10000;
+let selected = null;
+let priceNow = 0;
 let history = [];
+let chart;
 
-const markets = [
-{n:"USD/TRY",b:"USD",q:"TRY"},
-{n:"EUR/USD",b:"EUR",q:"USD"},
-{n:"GBP/USD",b:"GBP",q:"USD"},
-{n:"BTC/USD",b:"BTC",q:"USD"},
-{n:"ETH/USD",b:"ETH",q:"USD"}
-];
+let portfolio = {};
 
-const indices = [
-"BIST 100","DAX","NASDAQ","S&P 500","FTSE 100","Nikkei 225","Hang Seng","CAC 40"
-];
+const assets = ["BTC","ETH","USDTRY","EURUSD","BIST100","NASDAQ"];
 
-async function load(){
-const res = await fetch("https://open.er-api.com/v6/latest/USD");
-const data = await res.json();
-
-let html = "<div class='section-title'>💱 Döviz</div>";
-
-markets.forEach(m=>{
-let rate = data.rates[m.b] || (1/data.rates[m.q]);
-let price = rate.toFixed(4);
-let buy = (price*1.002).toFixed(4);
-let sell = (price*0.998).toFixed(4);
-
-html += `<div class='item' onclick='selectMarket("${m.n}",${price})'>
-<div class='symbol'>${m.n}</div>
-<div class='price'>${price}</div>
-<small>${buy} / ${sell}</small>
-</div>`;
-});
-
-html += "<div class='section-title'>📈 Borsalar</div>";
-
-indices.forEach(i=>{
-html += `<div class='item' onclick='selectIndex("${i}")'>
-<div class='symbol'>${i}</div>
-<div class='price'>--</div>
-</div>`;
-});
-
-document.getElementById("sidebar").innerHTML = html;
+/* RANDOM FİYAT */
+function getPrice(){
+  return (Math.random()*5000+50).toFixed(2);
 }
 
-function selectMarket(name,price){
-document.getElementById("title").innerText=name;
-document.getElementById("buy").innerText=(price*1.002).toFixed(4);
-document.getElementById("sell").innerText=(price*0.998).toFixed(4);
-update(price);
+/* LOAD */
+function load(){
+  let html="";
+
+  assets.forEach(a=>{
+    let p = getPrice();
+
+    html+=`
+      <div class="item" onclick="selectAsset('${a}',${p})">
+        <div class="symbol">${a}</div>
+        <div class="price">${p}</div>
+      </div>
+    `;
+  });
+
+  document.getElementById("list").innerHTML=html;
+  document.getElementById("balance").innerText=balance.toFixed(2);
+  renderPortfolio();
 }
 
-function selectIndex(name){
-document.getElementById("title").innerText=name;
-let fake = Math.random()*1000;
-document.getElementById("buy").innerText=fake.toFixed(2);
-document.getElementById("sell").innerText=(fake*0.99).toFixed(2);
-update(fake);
+/* SELECT */
+function selectAsset(name,price){
+  selected=name;
+  priceNow=price;
+
+  document.getElementById("title").innerText=name;
+  document.getElementById("price").innerText=price;
+
+  history.push(Number(price));
+  if(history.length>20) history.shift();
+
+  const ctx=document.getElementById("chart").getContext("2d");
+
+  if(chart) chart.destroy();
+
+  chart=new Chart(ctx,{
+    type:"line",
+    data:{
+      labels:history.map((_,i)=>i+1),
+      datasets:[{
+        data:history,
+        borderColor:"#0b57ff",
+        tension:0.3
+      }]
+    }
+  });
 }
 
-function update(v){
-history.push(Number(v));
-if(history.length>25) history.shift();
+/* AL */
+function buy(){
+  if(!selected) return;
 
-const ctx=document.getElementById("chart").getContext("2d");
-if(chart) chart.destroy();
+  if(balance >= priceNow){
+    balance -= priceNow;
 
-chart=new Chart(ctx,{type:"line",data:{labels:history.map((_,i)=>i+1),datasets:[{data:history,borderColor:"#00aaff",tension:0.3}]}});
+    portfolio[selected] = (portfolio[selected] || 0) + 1;
+
+    update();
+  }
+}
+
+/* SAT */
+function sell(){
+  if(!selected) return;
+
+  if(portfolio[selected] > 0){
+    balance += priceNow;
+    portfolio[selected] -= 1;
+  }
+
+  update();
+}
+
+/* UPDATE */
+function update(){
+  document.getElementById("balance").innerText=balance.toFixed(2);
+  renderPortfolio();
+}
+
+/* PORTFOLIO */
+function renderPortfolio(){
+  let html="";
+
+  for(let k in portfolio){
+    html+=`<div>${k} : ${portfolio[k]}</div>`;
+  }
+
+  document.getElementById("plist").innerHTML=html || "Boş";
 }
 
 load();
-setInterval(load,8000);
+setInterval(load,5000);
+
 </script>
 
 </body>
