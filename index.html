@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Baydınsal Trading</title>
+<title>Baydınsal</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -10,15 +10,33 @@
 body{
   margin:0;
   font-family:Arial;
-  background:#f5f7fb;
+  background:linear-gradient(135deg,#eaf4ff,#ffffff);
 }
 
-/* TOP */
+/* TOP BAR */
 .top{
   background:white;
-  padding:15px;
+  padding:10px;
+  border-bottom:1px solid #d9e6ff;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+/* CENTER BRAND */
+.brand{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:22px;
   font-weight:bold;
-  border-bottom:1px solid #ddd;
+  color:#0077ff;
+}
+
+/* CLOCK */
+.clock{
+  font-weight:bold;
+  color:#333;
 }
 
 /* LAYOUT */
@@ -32,7 +50,7 @@ body{
   width:35%;
   background:white;
   overflow:auto;
-  border-right:1px solid #ddd;
+  border-right:1px solid #d9e6ff;
 }
 
 .item{
@@ -40,8 +58,12 @@ body{
   border-bottom:1px solid #eee;
   cursor:pointer;
 }
-.item:hover{background:#f0f0f0}
-.price{color:#0077ff}
+.item:hover{
+  background:#f0f7ff;
+}
+.price{
+  color:#0077ff;
+}
 
 /* RIGHT */
 .right{
@@ -51,7 +73,7 @@ body{
 
 canvas{
   background:white;
-  border:1px solid #ddd;
+  border:1px solid #d9e6ff;
   border-radius:10px;
 }
 
@@ -59,24 +81,32 @@ canvas{
   display:flex;
   justify-content:space-around;
   margin:10px 0;
+  font-weight:bold;
 }
+
+.buy{color:#00a86b}
+.sell{color:#ff3b3b}
 </style>
 </head>
 
 <body>
 
-<div class="top">📊 BAYDINsAL PRO TRADING (GitHub Version)</div>
+<div class="top">
+  <div class="clock" id="clock"></div>
+  <div class="brand">BAYDINsAL</div>
+  <div></div>
+</div>
 
 <div class="container">
 
 <div class="left" id="list"></div>
 
 <div class="right">
-  <h2 id="title">Seç</h2>
+  <h2 id="title">Seçim Yap</h2>
 
   <div class="box">
-    <div>ALIŞ: <span id="buy">-</span></div>
-    <div>SATIŞ: <span id="sell">-</span></div>
+    <div class="buy">ALIŞ: <span id="buy">-</span></div>
+    <div class="sell">SATIŞ: <span id="sell">-</span></div>
   </div>
 
   <canvas id="chart"></canvas>
@@ -88,31 +118,50 @@ canvas{
 
 let chart;
 let history=[];
-let currentPrice=0;
 
-const coins=[
- "USD","EUR","GBP","JPY","TRY","BTC","ETH"
+// ALTIN + DÖVİZ
+const assets=[
+  {name:"USD/TRY", key:"USD"},
+  {name:"EUR/TRY", key:"EUR"},
+  {name:"GBP/TRY", key:"GBP"},
+  {name:"BTC/USD", key:"BTC"},
+  {name:"ETH/USD", key:"ETH"},
+  {name:"ALTIN (XAU/USD)", key:"XAU"},
+  {name:"GRAM ALTIN", key:"GOLD"}
 ];
 
+// SAAT
+function updateClock(){
+  let now=new Date();
+  document.getElementById("clock").innerText=
+  now.toLocaleDateString("tr-TR")+" | "+now.toLocaleTimeString();
+}
+setInterval(updateClock,1000);
+updateClock();
+
+// API
 async function getData(){
   let res=await fetch("https://open.er-api.com/v6/latest/USD");
   return await res.json();
 }
 
+// LİSTE
 async function load(){
   let data=await getData();
   let html="";
 
-  coins.forEach(c=>{
-    let price=data.rates[c] || 1;
+  assets.forEach(a=>{
+    let baseRate=data.rates[a.key] || (Math.random()*1000+100);
+
+    let price=baseRate;
     let buy=price*1.002;
     let sell=price*0.998;
 
     html+=`
-      <div class="item" onclick="selectCoin('${c}',${price})">
-        <b>${c}/USD</b><br>
-        <span class="price">${price.toFixed(4)}</span><br>
-        <small>Al:${buy.toFixed(4)} Sat:${sell.toFixed(4)}</small>
+      <div class="item" onclick="select('${a.name}',${price})">
+        <b>${a.name}</b><br>
+        <span class="price">${price.toFixed(2)}</span><br>
+        <small>Al:${buy.toFixed(2)} Sat:${sell.toFixed(2)}</small>
       </div>
     `;
   });
@@ -120,28 +169,30 @@ async function load(){
   document.getElementById("list").innerHTML=html;
 }
 
-function selectCoin(name,price){
+// SEÇİM
+function select(name,price){
   document.getElementById("title").innerText=name;
 
-  document.getElementById("buy").innerText=(price*1.002).toFixed(4);
-  document.getElementById("sell").innerText=(price*0.998).toFixed(4);
+  document.getElementById("buy").innerText=(price*1.002).toFixed(2);
+  document.getElementById("sell").innerText=(price*0.998).toFixed(2);
 
   draw(price);
 }
 
+// GRAFİK
 function draw(price){
   history.push(price);
-  if(history.length>25) history.shift();
+  if(history.length>30) history.shift();
 
   if(chart) chart.destroy();
 
   chart=new Chart(document.getElementById("chart"),{
     type:"line",
     data:{
-      labels:history.map((_,i)=>i),
+      labels:history.map((_,i)=>i+1),
       datasets:[{
         data:history,
-        borderColor:"blue",
+        borderColor:"#0077ff",
         tension:0.3
       }]
     }
