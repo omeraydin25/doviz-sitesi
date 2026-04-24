@@ -36,8 +36,9 @@
       font-weight: bold;
     }
 
-    button:hover {
-      background: #00ddb3;
+    #error {
+      color: red;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -47,19 +48,25 @@
 <h1>💱 Döviz Takip Sitesi</h1>
 
 <div id="data">Yükleniyor...</div>
+<div id="error"></div>
 
 <button onclick="getData()">🔄 Yenile</button>
 
 <script>
 async function getData() {
   document.getElementById("data").innerHTML = "Yükleniyor...";
+  document.getElementById("error").innerHTML = "";
 
   try {
     const res = await fetch("https://api.frankfurter.app/latest?from=USD");
+
+    if (!res.ok) {
+      throw new Error("API cevap vermedi");
+    }
+
     const data = await res.json();
 
     let html = "";
-
     const show = ["EUR", "TRY", "GBP"];
 
     show.forEach(cur => {
@@ -73,7 +80,9 @@ async function getData() {
     document.getElementById("data").innerHTML = html;
 
   } catch (err) {
-    document.getElementById("data").innerHTML = "Hata oluştu 😢";
+    console.log(err);
+    document.getElementById("error").innerHTML =
+      "Hata oluştu: API erişilemedi 😢";
   }
 }
 
