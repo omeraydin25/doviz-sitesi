@@ -75,6 +75,51 @@ async function getData(){
 }
 
 function updateChart(value){
+  history.push(Number(value));
+
+  if(history.length > 10){
+    history.shift();
+  }
+
+  const ctx = document.getElementById("chart").getContext("2d");
+
+  if(chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: history.map((_,i)=>i+1),
+      datasets: [{
+        label: "USD/TRY",
+        data: history,
+        borderColor: "#00ffcc",
+        fill: false,
+        tension: 0.3
+      }]
+    }
+  });
+}
+
+getData();
+setInterval(getData, 10000);
+</script>
+let chart;
+let history = [];
+
+async function getData(){
+  const res = await fetch("https://open.er-api.com/v6/latest/USD");
+  const data = await res.json();
+
+  document.getElementById("data").innerHTML = `
+    <div class="card">💵 USD → TRY: ${data.rates.TRY}</div>
+    <div class="card">💶 EUR → USD: ${data.rates.EUR}</div>
+    <div class="card">💷 GBP → USD: ${data.rates.GBP}</div>
+  `;
+
+  updateChart(data.rates.TRY);
+}
+
+function updateChart(value){
   history.push(value);
   if(history.length > 10) history.shift();
 
