@@ -10,7 +10,7 @@
 body{
   margin:0;
   font-family: Arial;
-  background:#0f0f0f;
+  background: linear-gradient(135deg,#0f0f0f,#1c1c1c);
   color:white;
   text-align:center;
 }
@@ -20,18 +20,11 @@ h1{
   margin-top:20px;
 }
 
-.container{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  margin-top:10px;
-}
-
 .card{
   background:#222;
-  width:250px;
+  width:260px;
   padding:15px;
-  margin:10px;
+  margin:10px auto;
   border-radius:12px;
 }
 
@@ -44,6 +37,14 @@ button{
   font-weight:bold;
   margin-top:10px;
 }
+
+canvas{
+  background:#111;
+  border-radius:12px;
+  margin:20px auto;
+  display:block;
+  max-width:90%;
+}
 </style>
 </head>
 
@@ -55,31 +56,33 @@ button{
 
 <button onclick="getData()">🔄 Yenile</button>
 
-<canvas id="chart" width="400" height="200"></canvas>
+<canvas id="chart"></canvas>
 
 <script>
 let chart;
 let history = [];
 
 async function getData(){
-  const res = await fetch("https://open.er-api.com/v6/latest/USD");
-  const data = await res.json();
+  try {
+    const res = await fetch("https://open.er-api.com/v6/latest/USD");
+    const data = await res.json();
 
-  document.getElementById("data").innerHTML = `
-    <div class="card">💵 USD → TRY: ${data.rates.TRY}</div>
-    <div class="card">💶 EUR → USD: ${data.rates.EUR}</div>
-    <div class="card">💷 GBP → USD: ${data.rates.GBP}</div>
-  `;
+    document.getElementById("data").innerHTML = `
+      <div class="card">💵 USD → TRY: ${data.rates.TRY}</div>
+      <div class="card">💶 EUR → USD: ${data.rates.EUR}</div>
+      <div class="card">💷 GBP → USD: ${data.rates.GBP}</div>
+    `;
 
-  updateChart(data.rates.TRY);
+    updateChart(data.rates.TRY);
+
+  } catch (e) {
+    document.getElementById("data").innerHTML = "Hata oluştu 😢";
+  }
 }
 
 function updateChart(value){
   history.push(Number(value));
-
-  if(history.length > 10){
-    history.shift();
-  }
+  if(history.length > 10) history.shift();
 
   const ctx = document.getElementById("chart").getContext("2d");
 
@@ -94,45 +97,6 @@ function updateChart(value){
         data: history,
         borderColor: "#00ffcc",
         fill: false,
-        tension: 0.3
-      }]
-    }
-  });
-}
-
-getData();
-setInterval(getData, 10000);
-</script>
-let chart;
-let history = [];
-
-async function getData(){
-  const res = await fetch("https://open.er-api.com/v6/latest/USD");
-  const data = await res.json();
-
-  document.getElementById("data").innerHTML = `
-    <div class="card">💵 USD → TRY: ${data.rates.TRY}</div>
-    <div class="card">💶 EUR → USD: ${data.rates.EUR}</div>
-    <div class="card">💷 GBP → USD: ${data.rates.GBP}</div>
-  `;
-
-  updateChart(data.rates.TRY);
-}
-
-function updateChart(value){
-  history.push(value);
-  if(history.length > 10) history.shift();
-
-  if(chart) chart.destroy();
-
-  chart = new Chart(document.getElementById("chart"), {
-    type: "line",
-    data: {
-      labels: history.map((_,i)=>i+1),
-      datasets: [{
-        label: "USD/TRY",
-        data: history,
-        borderColor: "#00ffcc",
         tension: 0.3
       }]
     }
