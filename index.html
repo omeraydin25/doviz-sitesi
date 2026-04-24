@@ -1,1 +1,84 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Döviz Takip</title>
 
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f0f0f;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #00ffcc;
+    }
+
+    .box {
+      background: #1e1e1e;
+      margin: 10px auto;
+      padding: 15px;
+      width: 220px;
+      border-radius: 10px;
+      font-size: 18px;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 8px;
+      background: #00ffcc;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #00ddb3;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>💱 Döviz Takip Sitesi</h1>
+
+<div id="data">Yükleniyor...</div>
+
+<button onclick="getData()">🔄 Yenile</button>
+
+<script>
+async function getData() {
+  document.getElementById("data").innerHTML = "Yükleniyor...";
+
+  try {
+    const res = await fetch("https://api.frankfurter.app/latest?from=USD");
+    const data = await res.json();
+
+    let html = "";
+
+    const show = ["EUR", "TRY", "GBP"];
+
+    show.forEach(cur => {
+      html += `
+        <div class="box">
+          ${cur} : ${data.rates[cur]}
+        </div>
+      `;
+    });
+
+    document.getElementById("data").innerHTML = html;
+
+  } catch (err) {
+    document.getElementById("data").innerHTML = "Hata oluştu 😢";
+  }
+}
+
+getData();
+</script>
+
+</body>
+</html>
