@@ -13,9 +13,7 @@
       padding: 20px;
     }
 
-    h1 {
-      color: #00ffcc;
-    }
+    h1 { color: #00ffcc; }
 
     .box {
       background: #1e1e1e;
@@ -58,7 +56,10 @@ async function getData() {
   document.getElementById("error").innerHTML = "";
 
   try {
-    const res = await fetch("https://api.exchangerate.host/latest?base=USD");
+    const api = "https://api.exchangerate.host/latest?base=USD";
+
+    // 🔥 Proxy ile çekiyoruz
+    const res = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(api));
     const data = await res.json();
 
     let html = "";
@@ -75,8 +76,9 @@ async function getData() {
     document.getElementById("data").innerHTML = html;
 
   } catch (err) {
+    console.log(err);
     document.getElementById("error").innerHTML =
-      "Hata oluştu 😢 internet veya API sorunu";
+      "Hata oluştu 😢";
   }
 }
 
