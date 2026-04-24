@@ -1,84 +1,57 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Döviz Takip</title>
+<meta charset="UTF-8">
+<title>Döviz Takip</title>
 
-  <style>
-    body {
-      font-family: Arial;
-      background: #0f0f0f;
-      color: white;
-      text-align: center;
-      padding: 20px;
-    }
-
-    h1 { color: #00ffcc; }
-
-    .box {
-      background: #1e1e1e;
-      margin: 10px auto;
-      padding: 15px;
-      width: 220px;
-      border-radius: 10px;
-      font-size: 18px;
-    }
-
-    button {
-      padding: 10px 20px;
-      margin-top: 15px;
-      border: none;
-      border-radius: 8px;
-      background: #00ffcc;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    #error {
-      color: red;
-      margin-top: 10px;
-    }
-  </style>
+<style>
+body {
+  font-family: Arial;
+  background:#0f0f0f;
+  color:white;
+  text-align:center;
+  padding:20px;
+}
+h1 { color:#00ffcc; }
+.box {
+  background:#1e1e1e;
+  margin:10px auto;
+  padding:15px;
+  width:220px;
+  border-radius:10px;
+}
+button {
+  padding:10px 20px;
+  background:#00ffcc;
+  border:none;
+  border-radius:8px;
+  font-weight:bold;
+  cursor:pointer;
+}
+</style>
 </head>
 
 <body>
 
-<h1>💱 Döviz Takip Sitesi</h1>
+<h1>💱 Döviz Takip</h1>
 
 <div id="data">Yükleniyor...</div>
-<div id="error"></div>
 
 <button onclick="getData()">🔄 Yenile</button>
 
 <script>
 async function getData() {
-  document.getElementById("data").innerHTML = "Yükleniyor...";
-  document.getElementById("error").innerHTML = "";
-
   try {
-    const api = "https://api.exchangerate.host/latest?base=USD";
-
-    // 🔥 Proxy ile çekiyoruz
-    const res = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(api));
+    const res = await fetch("https://api.exchangerate.host/latest?base=USD");
     const data = await res.json();
 
-    let html = "";
-    const show = ["EUR", "TRY", "GBP"];
-
-    show.forEach(cur => {
-      html += `
-        <div class="box">
-          ${cur} : ${data.rates[cur]}
-        </div>
-      `;
-    });
-
-    document.getElementById("data").innerHTML = html;
-
-  } catch (err) {
-    console.log(err);
-    document.getElementById("error").innerHTML =
-      "Hata oluştu 😢";
+    document.getElementById("data").innerHTML = `
+      <div class="box">EUR: ${data.rates.EUR}</div>
+      <div class="box">TRY: ${data.rates.TRY}</div>
+      <div class="box">GBP: ${data.rates.GBP}</div>
+    `;
+  } catch (e) {
+    document.getElementById("data").innerHTML = "Hata oluştu 😢";
   }
 }
 
