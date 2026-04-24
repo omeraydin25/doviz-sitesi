@@ -27,8 +27,26 @@ h1{ color:#00ffcc; }
 <body>
 
 <h1>💱 Döviz Takip</h1>
+<div id="data">Yükleniyor...</div>
 
-<div class="box">USD → TRY: 34.20</div>
+<script>
+async function getData(){
+  try {
+    const res = await fetch("https://api.exchangerate.host/latest?base=USD");
+    const data = await res.json();
+
+    document.getElementById("data").innerHTML = `
+      <div class="box">EUR → ${data.rates.EUR}</div>
+      <div class="box">GBP → ${data.rates.GBP}</div>
+      <div class="box">TRY → ${data.rates.TRY}</div>
+    `;
+  } catch(e){
+    document.getElementById("data").innerHTML = "Hata oluştu 😢";
+  }
+}
+
+getData();
+</script>
 <div class="box">EUR → TRY: 37.10</div>
 <div class="box">GBP → TRY: 43.50</div>
 
