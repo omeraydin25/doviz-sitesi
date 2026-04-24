@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Baydınsal Trading Sim</title>
+<title>Baydınsal Pro MAX</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -11,35 +11,69 @@ body{
   margin:0;
   font-family:Arial;
   background:#f4f6fb;
+  transition:0.3s;
+}
+
+/* DARK MODE */
+body.dark{
+  background:#0b1220;
+  color:white;
 }
 
 .header{
   padding:12px;
   text-align:center;
+  font-size:20px;
   font-weight:bold;
   background:white;
-  border-bottom:1px solid #ddd;
+}
+body.dark .header{background:#111a2e;}
+
+.topbar{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  padding:10px;
+}
+
+input{
+  padding:8px;
+  width:200px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+button{
+  padding:8px 12px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  background:#0b57ff;
+  color:white;
 }
 
 .container{
   display:flex;
-  height:calc(100vh - 60px);
+  height:calc(100vh - 120px);
 }
 
 .left{
   width:35%;
   background:white;
-  border-right:1px solid #ddd;
   overflow:auto;
+  border-right:1px solid #ddd;
 }
+body.dark .left{background:#111a2e;}
 
 .item{
   padding:12px;
   border-bottom:1px solid #eee;
   cursor:pointer;
 }
+body.dark .item{border-color:#222;}
 
 .item:hover{background:#eef3ff;}
+body.dark .item:hover{background:#1b2a4a;}
 
 .symbol{font-weight:bold;}
 .price{color:#0b57ff;}
@@ -52,8 +86,8 @@ body{
 canvas{
   background:white;
   border-radius:10px;
-  border:1px solid #ddd;
 }
+body.dark canvas{background:#111a2e;}
 
 .box{
   display:flex;
@@ -62,107 +96,125 @@ canvas{
   font-weight:bold;
 }
 
-button{
-  padding:10px;
-  margin:5px;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-}
-
-.buyBtn{background:green;color:white;}
-.sellBtn{background:red;color:white;}
-
-.portfolio{
-  margin-top:10px;
-  background:#fff;
-  padding:10px;
-  border-radius:10px;
-  border:1px solid #ddd;
-}
+.buy{color:green;}
+.sell{color:red;}
 </style>
 </head>
 
 <body>
 
-<div class="header">📊 Baydınsal Trading Simulator</div>
+<div class="header">📊 BAYDINNSAL PRO MAX</div>
+
+<div class="topbar">
+<input id="search" placeholder="Ara (BTC, USD, EUR...)" onkeyup="render()">
+<button onclick="toggleDark()">🌙</button>
+</div>
 
 <div class="container">
 
 <div class="left" id="list"></div>
 
 <div class="right">
-
-<h3 id="title">Seç</h3>
+<h3 id="title">Seçim yap</h3>
 
 <div class="box">
-<div>Fiyat: <span id="price">-</span></div>
-<div>Bakiye: $<span id="balance">10000</span></div>
+<div class="buy">ALIŞ: <span id="buy">-</span></div>
+<div class="sell">SATIŞ: <span id="sell">-</span></div>
 </div>
-
-<button class="buyBtn" onclick="buy()">AL</button>
-<button class="sellBtn" onclick="sell()">SAT</button>
 
 <canvas id="chart"></canvas>
-
-<div class="portfolio" id="portfolio">
-<h4>📦 Portföy</h4>
-<div id="plist"></div>
 </div>
 
-</div>
 </div>
 
 <script>
-
-let balance = 10000;
-let selected = null;
-let priceNow = 0;
-let history = [];
 let chart;
+let history=[];
+let dataList=[];
 
-let portfolio = {};
+/* FAVORİ */
+let fav = JSON.parse(localStorage.getItem("fav")||"[]");
 
-const assets = ["BTC","ETH","USDTRY","EURUSD","BIST100","NASDAQ"];
+/* KRİPTO API (GERÇEK) */
+async function getCrypto(){
+  const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple,dogecoin&vs_currencies=usd");
+  const d = await res.json();
 
-/* RANDOM FİYAT */
-function getPrice(){
-  return (Math.random()*5000+50).toFixed(2);
+  return [
+    {name:"BTC/USD", price:d.bitcoin.usd},
+    {name:"ETH/USD", price:d.ethereum.usd},
+    {name:"SOL/USD", price:d.solana.usd},
+    {name:"XRP/USD", price:d.ripple.usd},
+    {name:"DOGE/USD", price:d.dogecoin.usd}
+  ];
 }
 
-/* LOAD */
-function load(){
+/* FX */
+async function getFX(){
+  const res = await fetch("https://open.er-api.com/v6/latest/USD");
+  const d = await res.json();
+
+  return [
+    {name:"USD/TRY", price:d.rates.TRY},
+    {name:"EUR/USD", price:1/d.rates.EUR},
+    {name:"GBP/USD", price:1/d.rates.GBP}
+  ];
+}
+
+/* Borsa (simülasyon) */
+function getIndex(){
+  const arr=["BIST100","NASDAQ","DOW JONES","DAX","S&P500"];
+  return arr.map(i=>({name:i,price:(Math.random()*20000+1000).toFixed(2)}));
+}
+
+/* TOPLA */
+async function load(){
+  const fx = await getFX();
+  const cr = await getCrypto();
+  const ind = getIndex();
+
+  dataList=[...fx,...cr,...ind];
+  render();
+}
+
+/* RENDE */
+function render(){
+  let q=document.getElementById("search").value.toLowerCase();
   let html="";
 
-  assets.forEach(a=>{
-    let p = getPrice();
+  dataList
+  .filter(x=>x.name.toLowerCase().includes(q))
+  .forEach(d=>{
+
+    let buy=(d.price*1.002).toFixed(2);
+    let sell=(d.price*0.998).toFixed(2);
+
+    let star = fav.includes(d.name) ? "⭐" : "☆";
 
     html+=`
-      <div class="item" onclick="selectAsset('${a}',${p})">
-        <div class="symbol">${a}</div>
-        <div class="price">${p}</div>
+      <div class="item" onclick="selectItem('${d.name}',${d.price})">
+        <div class="symbol">${star} ${d.name}</div>
+        <div class="price">${d.price}</div>
+        <small>B:${buy} S:${sell}</small>
       </div>
     `;
   });
 
   document.getElementById("list").innerHTML=html;
-  document.getElementById("balance").innerText=balance.toFixed(2);
-  renderPortfolio();
 }
 
-/* SELECT */
-function selectAsset(name,price){
-  selected=name;
-  priceNow=price;
+/* SEÇ */
+function selectItem(name,price){
 
   document.getElementById("title").innerText=name;
-  document.getElementById("price").innerText=price;
+
+  document.getElementById("buy").innerText=(price*1.002).toFixed(2);
+  document.getElementById("sell").innerText=(price*0.998).toFixed(2);
 
   history.push(Number(price));
-  if(history.length>20) history.shift();
+  if(history.length>30) history.shift();
 
   const ctx=document.getElementById("chart").getContext("2d");
-
   if(chart) chart.destroy();
 
   chart=new Chart(ctx,{
@@ -176,53 +228,22 @@ function selectAsset(name,price){
       }]
     }
   });
-}
 
-/* AL */
-function buy(){
-  if(!selected) return;
-
-  if(balance >= priceNow){
-    balance -= priceNow;
-
-    portfolio[selected] = (portfolio[selected] || 0) + 1;
-
-    update();
+  /* FAVORİ EKLE */
+  if(!fav.includes(name)){
+    fav.push(name);
+    localStorage.setItem("fav",JSON.stringify(fav));
   }
 }
 
-/* SAT */
-function sell(){
-  if(!selected) return;
-
-  if(portfolio[selected] > 0){
-    balance += priceNow;
-    portfolio[selected] -= 1;
-  }
-
-  update();
+/* DARK MODE */
+function toggleDark(){
+  document.body.classList.toggle("dark");
 }
 
-/* UPDATE */
-function update(){
-  document.getElementById("balance").innerText=balance.toFixed(2);
-  renderPortfolio();
-}
-
-/* PORTFOLIO */
-function renderPortfolio(){
-  let html="";
-
-  for(let k in portfolio){
-    html+=`<div>${k} : ${portfolio[k]}</div>`;
-  }
-
-  document.getElementById("plist").innerHTML=html || "Boş";
-}
-
+/* START */
 load();
-setInterval(load,5000);
-
+setInterval(load,8000);
 </script>
 
 </body>
