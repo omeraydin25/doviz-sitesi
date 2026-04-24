@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Baydınsal</title>
+<title>Baydınsal Trading</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -13,44 +13,39 @@ body{
   background:linear-gradient(135deg,#eaf4ff,#ffffff);
 }
 
-/* TOP BAR */
+/* TOP MENU */
 .top{
   background:white;
-  padding:10px;
+  padding:12px;
   border-bottom:1px solid #d9e6ff;
   display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-/* CENTER BRAND */
-.brand{
-  position:absolute;
-  left:50%;
-  transform:translateX(-50%);
-  font-size:22px;
+  justify-content:center;
+  gap:20px;
   font-weight:bold;
-  color:#0077ff;
 }
 
-/* CLOCK */
-.clock{
-  font-weight:bold;
-  color:#333;
+.tab{
+  cursor:pointer;
+  padding:8px 15px;
+  border-radius:8px;
+  background:#f2f8ff;
 }
 
-/* LAYOUT */
+.tab:hover{
+  background:#d9ecff;
+}
+
+/* LEFT LIST */
 .container{
   display:flex;
   height:calc(100vh - 50px);
 }
 
-/* LEFT */
 .left{
   width:35%;
   background:white;
-  overflow:auto;
   border-right:1px solid #d9e6ff;
+  overflow:auto;
 }
 
 .item{
@@ -61,9 +56,8 @@ body{
 .item:hover{
   background:#f0f7ff;
 }
-.price{
-  color:#0077ff;
-}
+
+.price{color:#0077ff}
 
 /* RIGHT */
 .right{
@@ -75,6 +69,12 @@ canvas{
   background:white;
   border:1px solid #d9e6ff;
   border-radius:10px;
+}
+
+.title{
+  font-size:20px;
+  font-weight:bold;
+  margin-bottom:10px;
 }
 
 .box{
@@ -91,10 +91,11 @@ canvas{
 
 <body>
 
+<!-- TOP MENU -->
 <div class="top">
-  <div class="clock" id="clock"></div>
-  <div class="brand">BAYDINsAL</div>
-  <div></div>
+  <div class="tab" onclick="setMarket('DOVIZ')">💱 Döviz</div>
+  <div class="tab" onclick="setMarket('ALTIN')">🟡 Altın</div>
+  <div class="tab" onclick="setMarket('KRIPTO')">₿ Kripto</div>
 </div>
 
 <div class="container">
@@ -102,7 +103,8 @@ canvas{
 <div class="left" id="list"></div>
 
 <div class="right">
-  <h2 id="title">Seçim Yap</h2>
+
+  <div class="title" id="title">Seçim Yap</div>
 
   <div class="box">
     <div class="buy">ALIŞ: <span id="buy">-</span></div>
@@ -119,41 +121,57 @@ canvas{
 let chart;
 let history=[];
 
-// ALTIN + DÖVİZ
-const assets=[
-  {name:"USD/TRY", key:"USD"},
-  {name:"EUR/TRY", key:"EUR"},
-  {name:"GBP/TRY", key:"GBP"},
-  {name:"BTC/USD", key:"BTC"},
-  {name:"ETH/USD", key:"ETH"},
-  {name:"ALTIN (XAU/USD)", key:"XAU"},
-  {name:"GRAM ALTIN", key:"GOLD"}
-];
+let mode="DOVIZ";
 
-// SAAT
-function updateClock(){
-  let now=new Date();
-  document.getElementById("clock").innerText=
-  now.toLocaleDateString("tr-TR")+" | "+now.toLocaleTimeString();
-}
-setInterval(updateClock,1000);
-updateClock();
+// VARLIKLAR
+const dataSets={
+  DOVIZ:[
+    {name:"USD/TRY", base:"USD"},
+    {name:"EUR/TRY", base:"EUR"},
+    {name:"GBP/TRY", base:"GBP"}
+  ],
+  ALTIN:[
+    {name:"Gram Altın", base:"XAU"},
+    {name:"Ons Altın", base:"XAU"},
+    {name:"Çeyrek Altın", base:"XAU"},
+    {name:"Cumhuriyet Altını", base:"XAU"}
+  ],
+  KRIPTO:[
+    {name:"BTC/USD", base:"BTC"},
+    {name:"ETH/USD", base:"ETH"}
+  ]
+};
 
 // API
-async function getData(){
+async function getRates(){
   let res=await fetch("https://open.er-api.com/v6/latest/USD");
   return await res.json();
 }
 
+// MENÜ DEĞİŞTİR
+function setMarket(m){
+  mode=m;
+  load();
+}
+
 // LİSTE
 async function load(){
-  let data=await getData();
+  let data=await getRates();
+  let list=dataSets[mode];
   let html="";
 
-  assets.forEach(a=>{
-    let baseRate=data.rates[a.key] || (Math.random()*1000+100);
+  list.forEach(a=>{
 
-    let price=baseRate;
+    let price = data.rates["TRY"] || (Math.random()*1000+100);
+
+    // ALTIN TÜRLERİ SAHTE ORANLAMA
+    if(a.name.includes("Altın")){
+      if(a.name.includes("Gram")) price = 2400;
+      if(a.name.includes("Ons")) price = 2000;
+      if(a.name.includes("Çeyrek")) price = 4000;
+      if(a.name.includes("Cumhuriyet")) price = 16000;
+    }
+
     let buy=price*1.002;
     let sell=price*0.998;
 
@@ -182,7 +200,7 @@ function select(name,price){
 // GRAFİK
 function draw(price){
   history.push(price);
-  if(history.length>30) history.shift();
+  if(history.length>25) history.shift();
 
   if(chart) chart.destroy();
 
@@ -200,7 +218,6 @@ function draw(price){
 }
 
 load();
-setInterval(load,10000);
 
 </script>
 
