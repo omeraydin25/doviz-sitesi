@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Canlı Döviz</title>
+<title>Canlı Döviz Pro</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -12,134 +12,158 @@ body{
   font-family: Arial;
   background:#0b1220;
   color:white;
+  text-align:center;
 }
 
 .header{
   padding:20px;
-  text-align:center;
-  background:#111a2e;
   font-size:22px;
   font-weight:bold;
+  background:#111a2e;
   color:#00ffcc;
 }
 
-.grid{
-  display:flex;
-  justify-content:center;
-  gap:15px;
-  flex-wrap:wrap;
-  margin-top:20px;
-}
-
-.card{
-  background:#16213e;
-  padding:20px;
-  border-radius:12px;
-  width:180px;
-  text-align:center;
-  box-shadow:0 0 10px rgba(0,0,0,0.4);
-}
-
-.card h2{
-  margin:0;
-  font-size:16px;
-  color:#aaa;
-}
-
-.card p{
-  font-size:20px;
-  margin-top:10px;
-  color:#00ffcc;
-}
-
-.chartBox{
+table{
   width:90%;
-  max-width:600px;
-  margin:30px auto;
+  max-width:650px;
+  margin:20px auto;
+  border-collapse:collapse;
   background:#16213e;
-  padding:20px;
-  border-radius:12px;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+th, td{
+  padding:12px;
+  border-bottom:1px solid #222;
+}
+
+th{
+  background:#111a2e;
 }
 
 button{
-  display:block;
-  margin:20px auto;
   padding:10px 20px;
   background:#00ffcc;
   border:none;
   border-radius:8px;
   cursor:pointer;
   font-weight:bold;
+  margin:10px;
+}
+
+canvas{
+  width:90%;
+  max-width:650px;
+  margin:20px auto;
+  display:block;
+  background:#16213e;
+  border-radius:12px;
+  padding:10px;
+}
+
+.alarm{
+  margin:10px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">💱 Canlı Döviz Takip</div>
+<div class="header">💱 Canlı Finans Pro</div>
 
-<div class="grid" id="data">
-  Yükleniyor...
+<button onclick="getData()">🔄 Yenile</button>
+
+<div class="alarm">
+  🔔 Alarm (USD/TRY üst sınır):
+  <input id="limit" type="number" placeholder="örn 45">
+  <button onclick="setAlarm()">Ayarla</button>
 </div>
 
-<button onclick="getData()">🔄 Güncelle</button>
+<table>
+<tr><th>Enstrüman</th><th>Değer</th></tr>
 
-<div class="chartBox">
-  <canvas id="chart"></canvas>
-</div>
+<tr><td>USD / TRY</td><td id="usd">-</td></tr>
+<tr><td>EUR / USD</td><td id="eur">-</td></tr>
+<tr><td>GBP / USD</td><td id="gbp">-</td></tr>
+<tr><td>BTC / USD</td><td id="btc">-</td></tr>
+<tr><td>ALTIN (XAU)</td><td id="gold">-</td></tr>
+</table>
+
+<canvas id="chart"></canvas>
 
 <script>
 let chart;
 let history = [];
+let alarmLimit = null;
+
+function setAlarm(){
+  alarmLimit = document.getElementById("limit").value;
+  alert("Alarm ayarlandı: " + alarmLimit);
+}
 
 async function getData(){
-  const res = await fetch("https://open.er-api.com/v6/latest/USD");
-  const data = await res.json();
+  try{
+    // Döviz
+    const res = await fetch("https://open.er-api.com/v6/latest/USD");
+    const data = await res.json();
 
-  document.getElementById("data").innerHTML = `
-    <div class="card">
-      <h2>USD / TRY</h2>
-      <p>${data.rates.TRY}</p>
-    </div>
+    // Bitcoin (basit fake API)
+    const btc = await fetch("https://api.coindesk.com/v1/bpi/currentprice/USD.json");
+    const btcData = await btc.json();
 
-    <div class="card">
-      <h2>EUR / USD</h2>
-      <p>${data.rates.EUR}</p>
-    </div>
+    const btcPrice = btcData.bpi.USD.rate_float;
 
-    <div class="card">
-      <h2>GBP / USD</h2>
-      <p>${data.rates.GBP}</p>
-    </div>
-  `;
+    // Altın (yaklaşık API)
+    const goldRes = await fetch("https://api.metals.live/v1/spot/gold");
+    const goldData = await goldRes.json();
 
-  updateChart(data.rates.TRY);
+    const goldPrice = goldData[0][1];
+
+    // UI
+    document.getElementById("usd").innerText = data.rates.TRY;
+    document.getElementById("eur").innerText = data.rates.EUR;
+    document.getElementById("gbp").innerText = data.rates.GBP;
+    document.getElementById("btc").innerText = btcPrice.toFixed(2);
+    document.getElementById("gold").innerText = goldPrice;
+
+    // Alarm kontrol
+    if(alarmLimit && data.rates.TRY > alarmLimit){
+      alert("🚨 USD/TRY alarm tetiklendi: " + data.rates.TRY);
+      alarmLimit = null;
+    }
+
+    updateChart(data.rates.TRY);
+
+  } catch(e){
+    console.log(e);
+  }
 }
 
 function updateChart(value){
   history.push(Number(value));
   if(history.length > 10) history.shift();
 
-  const ctx = document.getElementById("chart");
+  const ctx = document.getElementById("chart").getContext("2d");
 
   if(chart) chart.destroy();
 
   chart = new Chart(ctx, {
-    type: "line",
-    data: {
+    type:"line",
+    data:{
       labels: history.map((_,i)=>i+1),
-      datasets: [{
-        label: "USD/TRY",
-        data: history,
-        borderColor: "#00ffcc",
-        tension: 0.3
+      datasets:[{
+        label:"USD/TRY",
+        data:history,
+        borderColor:"#00ffcc",
+        tension:0.3
       }]
     }
   });
 }
 
 getData();
-setInterval(getData, 10000);
+setInterval(getData, 5000);
 </script>
 
 </body>
