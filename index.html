@@ -2,49 +2,53 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Pro Trading Panel</title>
+<title>Canlı Küresel Borsa & Döviz Paneli</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
   margin:0;
-  font-family: Arial;
-  background:#0a0f1f;
-  color:white;
+  font-family:Arial;
+  background:#f5f7fb;
+  color:#111;
 }
 
-/* TOP BAR */
 .header{
   padding:15px;
   text-align:center;
-  font-size:22px;
-  color:#00ffcc;
-  background:#111a2e;
+  font-size:20px;
+  font-weight:bold;
+  background:white;
+  border-bottom:1px solid #ddd;
 }
 
-/* LAYOUT */
 .container{
   display:flex;
   height:calc(100vh - 60px);
 }
 
-/* LEFT MARKET LIST */
-.market{
+.sidebar{
   width:35%;
-  background:#0f1629;
   overflow:auto;
-  border-right:1px solid #222;
+  background:white;
+  border-right:1px solid #ddd;
+}
+
+.section-title{
+  padding:10px;
+  font-weight:bold;
+  background:#f0f2f5;
 }
 
 .item{
-  padding:15px;
-  border-bottom:1px solid #1f2a44;
+  padding:12px;
+  border-bottom:1px solid #eee;
   cursor:pointer;
 }
 
 .item:hover{
-  background:#16213e;
+  background:#f0f7ff;
 }
 
 .symbol{
@@ -52,126 +56,127 @@ body{
 }
 
 .price{
-  color:#00ffcc;
+  color:#0aa;
 }
 
-/* RIGHT CHART */
 .right{
   flex:1;
   padding:20px;
 }
 
 canvas{
-  background:#111a2e;
-  border-radius:12px;
+  background:white;
+  border-radius:10px;
   padding:10px;
+  border:1px solid #ddd;
 }
 
-/* BUY SELL */
 .box{
-  margin-top:10px;
+  margin:10px 0;
   display:flex;
   justify-content:space-around;
 }
 
-.buy{color:#00ff99;}
-.sell{color:#ff4d4d;}
+.buy{color:green;}
+.sell{color:red;}
 </style>
 </head>
 
 <body>
 
-<div class="header">📊 PRO TRADING PANEL (Midas Style)</div>
+<div class="header">📊 CANLI KÜRESEL BORSA + DÖVİZ PANELİ</div>
 
 <div class="container">
 
-  <div class="market" id="market"></div>
+<div class="sidebar" id="sidebar"></div>
 
-  <div class="right">
-    <h3 id="title">Seçim Yap</h3>
+<div class="right">
+<h3 id="title">Seçim Yap</h3>
 
-    <div class="box">
-      <div class="buy">ALIŞ: <span id="buy">-</span></div>
-      <div class="sell">SATIŞ: <span id="sell">-</span></div>
-    </div>
+<div class="box">
+<div class="buy">ALIŞ: <span id="buy">-</span></div>
+<div class="sell">SATIŞ: <span id="sell">-</span></div>
+</div>
 
-    <canvas id="chart"></canvas>
-  </div>
+<canvas id="chart"></canvas>
+</div>
 
 </div>
 
 <script>
 let chart;
 let history = [];
-let selected = "USDTRY";
 
 const markets = [
-  {name:"USD/TRY", base:"USD", quote:"TRY"},
-  {name:"EUR/USD", base:"EUR", quote:"USD"},
-  {name:"GBP/USD", base:"GBP", quote:"USD"},
-  {name:"BTC/USD", base:"BTC", quote:"USD"},
-  {name:"ETH/USD", base:"ETH", quote:"USD"},
-  {name:"JPY/USD", base:"JPY", quote:"USD"}
+{n:"USD/TRY",b:"USD",q:"TRY"},
+{n:"EUR/USD",b:"EUR",q:"USD"},
+{n:"GBP/USD",b:"GBP",q:"USD"},
+{n:"BTC/USD",b:"BTC",q:"USD"},
+{n:"ETH/USD",b:"ETH",q:"USD"}
 ];
 
-async function loadMarkets(){
-  const res = await fetch("https://open.er-api.com/v6/latest/USD");
-  const data = await res.json();
+const indices = [
+"BIST 100","DAX","NASDAQ","S&P 500","FTSE 100","Nikkei 225","Hang Seng","CAC 40"
+];
 
-  let html = "";
+async function load(){
+const res = await fetch("https://open.er-api.com/v6/latest/USD");
+const data = await res.json();
 
-  markets.forEach(m => {
-    let rate = data.rates[m.base] || (1 / data.rates[m.quote]);
+let html = "<div class='section-title'>💱 Döviz</div>";
 
-    let price = rate.toFixed(4);
-    let buy = (price * 1.002).toFixed(4);
-    let sell = (price * 0.998).toFixed(4);
+markets.forEach(m=>{
+let rate = data.rates[m.b] || (1/data.rates[m.q]);
+let price = rate.toFixed(4);
+let buy = (price*1.002).toFixed(4);
+let sell = (price*0.998).toFixed(4);
 
-    html += `
-      <div class="item" onclick="selectMarket('${m.name}',${price})">
-        <div class="symbol">${m.name}</div>
-        <div class="price">${price}</div>
-        <small class="buy">B:${buy} S:${sell}</small>
-      </div>
-    `;
-  });
+html += `<div class='item' onclick='selectMarket("${m.n}",${price})'>
+<div class='symbol'>${m.n}</div>
+<div class='price'>${price}</div>
+<small>${buy} / ${sell}</small>
+</div>`;
+});
 
-  document.getElementById("market").innerHTML = html;
+html += "<div class='section-title'>📈 Borsalar</div>";
+
+indices.forEach(i=>{
+html += `<div class='item' onclick='selectIndex("${i}")'>
+<div class='symbol'>${i}</div>
+<div class='price'>--</div>
+</div>`;
+});
+
+document.getElementById("sidebar").innerHTML = html;
 }
 
-function selectMarket(name, price){
-  document.getElementById("title").innerText = name;
-
-  document.getElementById("buy").innerText = (price * 1.002).toFixed(4);
-  document.getElementById("sell").innerText = (price * 0.998).toFixed(4);
-
-  updateChart(price);
+function selectMarket(name,price){
+document.getElementById("title").innerText=name;
+document.getElementById("buy").innerText=(price*1.002).toFixed(4);
+document.getElementById("sell").innerText=(price*0.998).toFixed(4);
+update(price);
 }
 
-function updateChart(value){
-  history.push(Number(value));
-  if(history.length > 20) history.shift();
-
-  const ctx = document.getElementById("chart").getContext("2d");
-
-  if(chart) chart.destroy();
-
-  chart = new Chart(ctx,{
-    type:"line",
-    data:{
-      labels: history.map((_,i)=>i+1),
-      datasets:[{
-        label:"Fiyat",
-        data:history,
-        borderColor:"#00ffcc",
-        tension:0.3
-      }]
-    }
-  });
+function selectIndex(name){
+document.getElementById("title").innerText=name;
+let fake = Math.random()*1000;
+document.getElementById("buy").innerText=fake.toFixed(2);
+document.getElementById("sell").innerText=(fake*0.99).toFixed(2);
+update(fake);
 }
 
-loadMarkets();
-setInterval(loadMarkets,5000);
+function update(v){
+history.push(Number(v));
+if(history.length>25) history.shift();
+
+const ctx=document.getElementById("chart").getContext("2d");
+if(chart) chart.destroy();
+
+chart=new Chart(ctx,{type:"line",data:{labels:history.map((_,i)=>i+1),datasets:[{data:history,borderColor:"#00aaff",tension:0.3}]}});
+}
+
+load();
+setInterval(load,8000);
 </script>
 
 </body>
