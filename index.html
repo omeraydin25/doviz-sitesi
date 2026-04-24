@@ -58,12 +58,7 @@ async function getData() {
   document.getElementById("error").innerHTML = "";
 
   try {
-    const res = await fetch("https://api.frankfurter.app/latest?from=USD");
-
-    if (!res.ok) {
-      throw new Error("API cevap vermedi");
-    }
-
+    const res = await fetch("https://api.exchangerate.host/latest?base=USD");
     const data = await res.json();
 
     let html = "";
@@ -80,9 +75,8 @@ async function getData() {
     document.getElementById("data").innerHTML = html;
 
   } catch (err) {
-    console.log(err);
     document.getElementById("error").innerHTML =
-      "Hata oluştu: API erişilemedi 😢";
+      "Hata oluştu 😢 internet veya API sorunu";
   }
 }
 
