@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Baydınsal Pro</title>
+<title>Baydınsal Pro Trading</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -11,51 +11,64 @@ body{
   margin:0;
   font-family:Arial;
   background:#f4f6fb;
+  color:#111;
+}
+
+/* LOGIN */
+.login{
+  position:fixed;
+  inset:0;
+  background:#fff;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+}
+
+.login input{
+  padding:10px;
+  margin:5px;
+  width:200px;
+}
+
+button{
+  padding:10px;
+  cursor:pointer;
+  background:#111;
+  color:white;
+  border:none;
 }
 
 /* HEADER */
 .header{
-  padding:14px;
+  background:#fff;
+  padding:15px;
   text-align:center;
   font-size:20px;
   font-weight:bold;
-  background:white;
   border-bottom:1px solid #ddd;
 }
 
-/* TABS */
-.tabs{
-  display:flex;
-  justify-content:center;
-  gap:10px;
-  padding:10px;
-  background:#fff;
-}
-
-.tab{
-  padding:8px 15px;
-  border:1px solid #ddd;
-  cursor:pointer;
-  border-radius:8px;
-  background:#f8f9ff;
-}
-
-.tab.active{
-  background:#0b57ff;
-  color:white;
+/* BALANCE */
+.balance{
+  position:absolute;
+  right:20px;
+  top:15px;
+  font-weight:bold;
 }
 
 /* LAYOUT */
 .container{
   display:flex;
-  height:calc(100vh - 110px);
+  height:calc(100vh - 60px);
 }
 
-.left{
+/* MARKET */
+.market{
   width:35%;
-  background:white;
-  border-right:1px solid #ddd;
+  background:#fff;
   overflow:auto;
+  border-right:1px solid #ddd;
 }
 
 .item{
@@ -65,19 +78,19 @@ body{
 }
 
 .item:hover{
-  background:#eef3ff;
+  background:#f0f0f0;
 }
 
-.symbol{font-weight:bold;}
-.price{color:#0b57ff;}
+.price{color:#0077ff}
 
+/* RIGHT */
 .right{
   flex:1;
   padding:15px;
 }
 
 canvas{
-  background:white;
+  background:#fff;
   border:1px solid #ddd;
   border-radius:10px;
 }
@@ -86,143 +99,169 @@ canvas{
   display:flex;
   justify-content:space-around;
   margin:10px 0;
-  font-weight:bold;
 }
-
-.buy{color:green;}
-.sell{color:red;}
 </style>
 </head>
 
 <body>
 
-<div class="header">📊 BAYDINNSAL PRO TRADING PANEL</div>
+<!-- LOGIN -->
+<div class="login" id="loginBox">
+  <h2>Baydınsal Giriş</h2>
+  <input id="user" placeholder="Kullanıcı adı">
+  <input id="pass" type="password" placeholder="Şifre">
+  <button onclick="login()">Giriş / Kayıt</button>
+</div>
 
-<div class="tabs">
-  <div class="tab active" onclick="setTab('fx')">Döviz</div>
-  <div class="tab" onclick="setTab('crypto')">Kripto</div>
-  <div class="tab" onclick="setTab('index')">Borsa</div>
+<!-- MAIN -->
+<div id="app" style="display:none;">
+
+<div class="header">
+  BAYDINsAL TRADING PANEL
+  <div class="balance">Bakiye: <span id="balance">10000</span> ₺</div>
 </div>
 
 <div class="container">
 
-  <div class="left" id="list"></div>
+  <div class="market" id="market"></div>
 
   <div class="right">
     <h3 id="title">Seçim Yap</h3>
 
     <div class="box">
-      <div class="buy">ALIŞ: <span id="buy">-</span></div>
-      <div class="sell">SATIŞ: <span id="sell">-</span></div>
+      <div>ALIŞ: <span id="buy">-</span></div>
+      <div>SATIŞ: <span id="sell">-</span></div>
     </div>
+
+    <button onclick="buy()">ALIŞ YAP</button>
+    <button onclick="sell()">SATIŞ YAP</button>
 
     <canvas id="chart"></canvas>
   </div>
 
 </div>
+</div>
 
 <script>
+
+let userData = JSON.parse(localStorage.getItem("baydinsal")) || {
+  balance:10000,
+  name:"",
+  pass:""
+};
+
 let chart;
 let history=[];
-let currentTab="fx";
+let currentPrice=0;
+let currentName="";
 
-/* VERİLER */
-const crypto = ["BTC","ETH","SOL","XRP","DOGE"];
-const index = ["BIST100","NASDAQ","DOW JONES","DAX","S&P500"];
+const markets=[
+ {name:"USD/TRY", base:"USD"},
+ {name:"EUR/USD", base:"EUR"},
+ {name:"GBP/USD", base:"GBP"},
+ {name:"BTC/USD", base:"BTC"},
+ {name:"ETH/USD", base:"ETH"}
+];
 
-/* GERÇEK DÖVİZ API */
-async function getFX(){
-  const res = await fetch("https://open.er-api.com/v6/latest/USD");
-  const data = await res.json();
+// LOGIN
+function login(){
+  let u=document.getElementById("user").value;
+  let p=document.getElementById("pass").value;
 
-  return [
-    {name:"USD/TRY", price:data.rates.TRY},
-    {name:"EUR/USD", price:1/data.rates.EUR},
-    {name:"GBP/USD", price:1/data.rates.GBP}
-  ];
+  if(!userData.name){
+    userData.name=u;
+    userData.pass=p;
+    localStorage.setItem("baydinsal",JSON.stringify(userData));
+  }
+
+  if(u===userData.name && p===userData.pass){
+    document.getElementById("loginBox").style.display="none";
+    document.getElementById("app").style.display="block";
+    document.getElementById("balance").innerText=userData.balance;
+    loadMarkets();
+  }else{
+    alert("Hatalı giriş");
+  }
 }
 
-/* RANDOM KRİPTO */
-function getCrypto(){
-  return crypto.map(c=>({
-    name:c+"/USD",
-    price:(Math.random()*30000+100).toFixed(2)
-  }));
+// REAL USD API
+async function getRates(){
+  let res=await fetch("https://open.er-api.com/v6/latest/USD");
+  return await res.json();
 }
 
-/* RANDOM INDEX */
-function getIndex(){
-  return index.map(i=>({
-    name:i,
-    price:(Math.random()*20000+1000).toFixed(2)
-  }));
-}
-
-/* TAB */
-function setTab(t){
-  currentTab=t;
-
-  document.querySelectorAll(".tab").forEach(e=>e.classList.remove("active"));
-  event.target.classList.add("active");
-
-  load();
-}
-
-/* YÜKLE */
-async function load(){
-  let data=[];
-
-  if(currentTab==="fx") data = await getFX();
-  if(currentTab==="crypto") data = getCrypto();
-  if(currentTab==="index") data = getIndex();
-
+async function loadMarkets(){
+  let data=await getRates();
   let html="";
 
-  data.forEach(d=>{
-    let buy=(d.price*1.002).toFixed(2);
-    let sell=(d.price*0.998).toFixed(2);
+  markets.forEach(m=>{
+    let price=data.rates[m.base]||1;
+    let buy=price*1.002;
+    let sell=price*0.998;
 
     html+=`
-      <div class="item" onclick="selectItem('${d.name}',${d.price})">
-        <div class="symbol">${d.name}</div>
-        <div class="price">${d.price}</div>
-        <small>B:${buy} S:${sell}</small>
+      <div class="item" onclick="selectMarket('${m.name}',${price})">
+        <b>${m.name}</b><br>
+        <span class="price">${price.toFixed(4)}</span><br>
+        <small>Al:${buy.toFixed(4)} Sat:${sell.toFixed(4)}</small>
       </div>
     `;
   });
 
-  document.getElementById("list").innerHTML=html;
+  document.getElementById("market").innerHTML=html;
 }
 
-/* SEÇ */
-function selectItem(name,price){
+function selectMarket(name,price){
+  currentPrice=price;
+  currentName=name;
+
   document.getElementById("title").innerText=name;
+  document.getElementById("buy").innerText=(price*1.002).toFixed(4);
+  document.getElementById("sell").innerText=(price*0.998).toFixed(4);
 
-  document.getElementById("buy").innerText=(price*1.002).toFixed(2);
-  document.getElementById("sell").innerText=(price*0.998).toFixed(2);
+  addChart(price);
+}
 
-  history.push(Number(price));
-  if(history.length>20) history.shift();
-
-  const ctx=document.getElementById("chart").getContext("2d");
+// CHART
+function addChart(price){
+  history.push(price);
+  if(history.length>30) history.shift();
 
   if(chart) chart.destroy();
 
-  chart=new Chart(ctx,{
+  chart=new Chart(document.getElementById("chart"),{
     type:"line",
     data:{
-      labels:history.map((_,i)=>i+1),
+      labels:history.map((_,i)=>i),
       datasets:[{
         data:history,
-        borderColor:"#0b57ff",
+        borderColor:"blue",
         tension:0.3
       }]
     }
   });
 }
 
-load();
-setInterval(load,5000);
+// BUY SELL SYSTEM
+function buy(){
+  if(userData.balance>=1000){
+    userData.balance-=1000;
+    localStorage.setItem("baydinsal",JSON.stringify(userData));
+    document.getElementById("balance").innerText=userData.balance;
+    alert("ALIŞ YAPILDI");
+  }else alert("Bakiye yetersiz");
+}
+
+function sell(){
+  userData.balance+=1000;
+  localStorage.setItem("baydinsal",JSON.stringify(userData));
+  document.getElementById("balance").innerText=userData.balance;
+  alert("SATIŞ YAPILDI");
+}
+
+// AUTO REFRESH
+setInterval(loadMarkets,10000);
+
 </script>
 
 </body>
