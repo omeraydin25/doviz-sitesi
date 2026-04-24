@@ -5,28 +5,21 @@
 <title>Döviz Takip</title>
 
 <style>
-body {
+body{
   font-family: Arial;
   background:#0f0f0f;
   color:white;
   text-align:center;
   padding:20px;
 }
-h1 { color:#00ffcc; }
-.box {
+h1{ color:#00ffcc; }
+
+.box{
   background:#1e1e1e;
   margin:10px auto;
   padding:15px;
   width:220px;
   border-radius:10px;
-}
-button {
-  padding:10px 20px;
-  background:#00ffcc;
-  border:none;
-  border-radius:8px;
-  font-weight:bold;
-  cursor:pointer;
 }
 </style>
 </head>
@@ -35,28 +28,11 @@ button {
 
 <h1>💱 Döviz Takip</h1>
 
-<div id="data">Yükleniyor...</div>
+<div class="box">USD → TRY: 34.20</div>
+<div class="box">EUR → TRY: 37.10</div>
+<div class="box">GBP → TRY: 43.50</div>
 
-<button onclick="getData()">🔄 Yenile</button>
-
-<script>
-async function getData() {
-  try {
-    const res = await fetch("https://api.exchangerate.host/latest?base=USD");
-    const data = await res.json();
-
-    document.getElementById("data").innerHTML = `
-      <div class="box">EUR: ${data.rates.EUR}</div>
-      <div class="box">TRY: ${data.rates.TRY}</div>
-      <div class="box">GBP: ${data.rates.GBP}</div>
-    `;
-  } catch (e) {
-    document.getElementById("data").innerHTML = "Hata oluştu 😢";
-  }
-}
-
-getData();
-</script>
+<p>⚠️ Demo sürüm</p>
 
 </body>
 </html>
