@@ -4,25 +4,27 @@
 <meta charset="UTF-8">
 <title>Döviz Pro</title>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body{
   margin:0;
   font-family: Arial;
-  background: linear-gradient(135deg,#0f0f0f,#1c1c1c);
+  background:#0f0f0f;
   color:white;
   text-align:center;
 }
 
 h1{
-  margin-top:20px;
   color:#00ffcc;
+  margin-top:20px;
 }
 
 .container{
   display:flex;
   flex-direction:column;
   align-items:center;
-  margin-top:20px;
+  margin-top:10px;
 }
 
 .card{
@@ -31,18 +33,16 @@ h1{
   padding:15px;
   margin:10px;
   border-radius:12px;
-  box-shadow:0 0 10px #000;
-  font-size:18px;
 }
 
 button{
-  margin-top:20px;
   padding:10px 20px;
+  background:#00ffcc;
   border:none;
   border-radius:8px;
-  background:#00ffcc;
-  font-weight:bold;
   cursor:pointer;
+  font-weight:bold;
+  margin-top:10px;
 }
 </style>
 </head>
@@ -51,26 +51,47 @@ button{
 
 <h1>💱 Döviz Pro</h1>
 
-<div class="container" id="data">Yükleniyor...</div>
+<div id="data">Yükleniyor...</div>
 
 <button onclick="getData()">🔄 Yenile</button>
 
+<canvas id="chart" width="400" height="200"></canvas>
+
 <script>
+let chart;
+let history = [];
+
 async function getData(){
-  const box = document.getElementById("data");
+  const res = await fetch("https://open.er-api.com/v6/latest/USD");
+  const data = await res.json();
 
-  try {
-    const res = await fetch("https://open.er-api.com/v6/latest/USD");
-    const data = await res.json();
+  document.getElementById("data").innerHTML = `
+    <div class="card">💵 USD → TRY: ${data.rates.TRY}</div>
+    <div class="card">💶 EUR → USD: ${data.rates.EUR}</div>
+    <div class="card">💷 GBP → USD: ${data.rates.GBP}</div>
+  `;
 
-    box.innerHTML = `
-      <div class="card">💵 USD → TRY: ${data.rates.TRY}</div>
-      <div class="card">💶 EUR → USD: ${data.rates.EUR}</div>
-      <div class="card">💷 GBP → USD: ${data.rates.GBP}</div>
-    `;
-  } catch(e){
-    box.innerHTML = "Hata 😢";
-  }
+  updateChart(data.rates.TRY);
+}
+
+function updateChart(value){
+  history.push(value);
+  if(history.length > 10) history.shift();
+
+  if(chart) chart.destroy();
+
+  chart = new Chart(document.getElementById("chart"), {
+    type: "line",
+    data: {
+      labels: history.map((_,i)=>i+1),
+      datasets: [{
+        label: "USD/TRY",
+        data: history,
+        borderColor: "#00ffcc",
+        tension: 0.3
+      }]
+    }
+  });
 }
 
 getData();
