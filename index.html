@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Baydınsal Trading</title>
+<title>Baydınsal Ultra Pro</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -13,29 +13,26 @@ body{
   background:linear-gradient(135deg,#eaf4ff,#ffffff);
 }
 
-/* TOP MENU */
+/* TOP BAR */
 .top{
   background:white;
-  padding:12px;
+  padding:10px;
   border-bottom:1px solid #d9e6ff;
   display:flex;
   justify-content:center;
-  gap:20px;
+  gap:12px;
   font-weight:bold;
 }
 
 .tab{
-  cursor:pointer;
-  padding:8px 15px;
-  border-radius:8px;
+  padding:8px 12px;
   background:#f2f8ff;
+  border-radius:8px;
+  cursor:pointer;
 }
+.tab:hover{background:#d9ecff}
 
-.tab:hover{
-  background:#d9ecff;
-}
-
-/* LEFT LIST */
+/* LAYOUT */
 .container{
   display:flex;
   height:calc(100vh - 50px);
@@ -49,20 +46,18 @@ body{
 }
 
 .item{
-  padding:12px;
+  padding:10px;
   border-bottom:1px solid #eee;
   cursor:pointer;
 }
-.item:hover{
-  background:#f0f7ff;
-}
+.item:hover{background:#f0f7ff}
 
 .price{color:#0077ff}
 
 /* RIGHT */
 .right{
   flex:1;
-  padding:15px;
+  padding:10px;
 }
 
 canvas{
@@ -72,30 +67,38 @@ canvas{
 }
 
 .title{
-  font-size:20px;
+  font-size:18px;
   font-weight:bold;
-  margin-bottom:10px;
 }
 
+/* BOXES */
 .box{
   display:flex;
   justify-content:space-around;
   margin:10px 0;
-  font-weight:bold;
 }
 
-.buy{color:#00a86b}
-.sell{color:#ff3b3b}
+.green{color:green}
+.red{color:red}
+
+input,button{
+  padding:6px;
+}
+button{
+  background:#0077ff;
+  color:white;
+  border:none;
+  cursor:pointer;
+}
 </style>
 </head>
 
 <body>
 
-<!-- TOP MENU -->
 <div class="top">
-  <div class="tab" onclick="setMarket('DOVIZ')">💱 Döviz</div>
-  <div class="tab" onclick="setMarket('ALTIN')">🟡 Altın</div>
-  <div class="tab" onclick="setMarket('KRIPTO')">₿ Kripto</div>
+  <div class="tab" onclick="setMode('ALTIN')">🟡 Altın</div>
+  <div class="tab" onclick="setMode('DOVIZ')">💱 Döviz</div>
+  <div class="tab" onclick="setMode('BORSA')">📊 Borsa</div>
 </div>
 
 <div class="container">
@@ -107,8 +110,20 @@ canvas{
   <div class="title" id="title">Seçim Yap</div>
 
   <div class="box">
-    <div class="buy">ALIŞ: <span id="buy">-</span></div>
-    <div class="sell">SATIŞ: <span id="sell">-</span></div>
+    <div>ALIŞ: <span id="buy">-</span></div>
+    <div>SATIŞ: <span id="sell">-</span></div>
+  </div>
+
+  <div class="box">
+    <div>PORTFÖY: <span id="portfolio">0</span> ₺</div>
+    <div>K/Z: <span id="profit">0</span> ₺</div>
+  </div>
+
+  <div>
+    <input id="alarm" placeholder="Alarm fiyat">
+    <button onclick="setAlarm()">Alarm</button>
+    <button onclick="buy()">AL</button>
+    <button onclick="sell()">SAT</button>
   </div>
 
   <canvas id="chart"></canvas>
@@ -120,66 +135,52 @@ canvas{
 
 let chart;
 let history=[];
+let mode="ALTIN";
+let currentPrice=0;
+let buyPrice=0;
+let portfolio=10000;
+let alarm=null;
 
-let mode="DOVIZ";
-
-// VARLIKLAR
-const dataSets={
-  DOVIZ:[
-    {name:"USD/TRY", base:"USD"},
-    {name:"EUR/TRY", base:"EUR"},
-    {name:"GBP/TRY", base:"GBP"}
-  ],
-  ALTIN:[
-    {name:"Gram Altın", base:"XAU"},
-    {name:"Ons Altın", base:"XAU"},
-    {name:"Çeyrek Altın", base:"XAU"},
-    {name:"Cumhuriyet Altını", base:"XAU"}
-  ],
-  KRIPTO:[
-    {name:"BTC/USD", base:"BTC"},
-    {name:"ETH/USD", base:"ETH"}
-  ]
+// VERİLER
+const data={
+ ALTIN:[
+  {name:"Gram Altın",price:2400},
+  {name:"Çeyrek Altın",price:4000},
+  {name:"Yarım Altın",price:8000},
+  {name:"Tam Altın",price:16000},
+  {name:"Cumhuriyet Altını",price:16500},
+  {name:"Ons Altın",price:2000}
+ ],
+ DOVIZ:[
+  {name:"USD/TRY",price:32},
+  {name:"EUR/TRY",price:34},
+  {name:"GBP/TRY",price:40}
+ ],
+ BORSA:[
+  {name:"BIST 100",price:10000},
+  {name:"NASDAQ",price:18000},
+  {name:"S&P 500",price:5000},
+  {name:"DAX",price:18000}
+ ]
 };
 
-// API
-async function getRates(){
-  let res=await fetch("https://open.er-api.com/v6/latest/USD");
-  return await res.json();
-}
-
-// MENÜ DEĞİŞTİR
-function setMarket(m){
+function setMode(m){
   mode=m;
   load();
 }
 
 // LİSTE
-async function load(){
-  let data=await getRates();
-  let list=dataSets[mode];
+function load(){
+  let list=data[mode];
   let html="";
 
-  list.forEach(a=>{
-
-    let price = data.rates["TRY"] || (Math.random()*1000+100);
-
-    // ALTIN TÜRLERİ SAHTE ORANLAMA
-    if(a.name.includes("Altın")){
-      if(a.name.includes("Gram")) price = 2400;
-      if(a.name.includes("Ons")) price = 2000;
-      if(a.name.includes("Çeyrek")) price = 4000;
-      if(a.name.includes("Cumhuriyet")) price = 16000;
-    }
-
-    let buy=price*1.002;
-    let sell=price*0.998;
+  list.forEach(x=>{
+    let price=x.price + (Math.random()*20-10);
 
     html+=`
-      <div class="item" onclick="select('${a.name}',${price})">
-        <b>${a.name}</b><br>
-        <span class="price">${price.toFixed(2)}</span><br>
-        <small>Al:${buy.toFixed(2)} Sat:${sell.toFixed(2)}</small>
+      <div class="item" onclick="select('${x.name}',${price})">
+        <b>${x.name}</b><br>
+        <span class="price">${price.toFixed(2)}</span>
       </div>
     `;
   });
@@ -187,20 +188,41 @@ async function load(){
   document.getElementById("list").innerHTML=html;
 }
 
-// SEÇİM
+// SEÇ
 function select(name,price){
-  document.getElementById("title").innerText=name;
+  currentPrice=price;
 
+  document.getElementById("title").innerText=name;
   document.getElementById("buy").innerText=(price*1.002).toFixed(2);
   document.getElementById("sell").innerText=(price*0.998).toFixed(2);
 
   draw(price);
 }
 
+// AL
+function buy(){
+  buyPrice=currentPrice;
+  portfolio-=1000;
+  updatePortfolio();
+}
+
+// SAT
+function sell(){
+  let profit=currentPrice-buyPrice;
+  portfolio+=1000+profit*10;
+  updatePortfolio();
+}
+
+// PORTFÖY
+function updatePortfolio(){
+  document.getElementById("portfolio").innerText=portfolio.toFixed(2);
+  document.getElementById("profit").innerText=(portfolio-10000).toFixed(2);
+}
+
 // GRAFİK
 function draw(price){
   history.push(price);
-  if(history.length>25) history.shift();
+  if(history.length>30) history.shift();
 
   if(chart) chart.destroy();
 
@@ -215,6 +237,21 @@ function draw(price){
       }]
     }
   });
+
+  checkAlarm(price);
+}
+
+// ALARM
+function setAlarm(){
+  alarm=Number(document.getElementById("alarm").value);
+  alert("Alarm kuruldu: "+alarm);
+}
+
+function checkAlarm(price){
+  if(alarm && price>=alarm){
+    alert("🚨 FİYAT ALARMI!");
+    alarm=null;
+  }
 }
 
 load();
