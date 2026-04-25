@@ -1,61 +1,184 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Kaçan Kutu Oyunu</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: Arial;
-      text-align: center;
-    }
+<meta charset="UTF-8">
+<title>Kaçan Kutu ULTRA</title>
 
-    #kutu {
-      width: 80px;
-      height: 80px;
-      background: red;
-      position: absolute;
-      cursor: pointer;
-      border-radius: 10px;
-    }
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: Arial;
+  background: #111;
+  color: white;
+}
 
-    #puan {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      font-size: 24px;
-    }
-  </style>
+#kutu {
+  width: 80px;
+  height: 80px;
+  background: red;
+  position: absolute;
+  cursor: pointer;
+  border-radius: 15px;
+}
+
+#panel {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+}
+
+#basla {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  padding: 20px;
+  font-size: 24px;
+}
+
+#magaza {
+  position: fixed;
+  right: 10px;
+  top: 10px;
+  background: #222;
+  padding: 10px;
+}
+
+.skin {
+  padding: 5px;
+  margin: 5px;
+  cursor: pointer;
+  border: 1px solid white;
+}
+
+</style>
 </head>
 <body>
 
-<div id="puan">Puan: 0</div>
+<div id="panel">
+Puan: <span id="puan">0</span><br>
+Süre: <span id="sure">30</span><br>
+Coin: <span id="coin">0</span><br>
+Rekor: <span id="rekor">0</span>
+</div>
+
+<button id="basla">OYUNA BAŞLA</button>
 <div id="kutu"></div>
 
-<script>
-let puan = 0;
-let kutu = document.getElementById("kutu");
+<div id="magaza">
+<h3>Mağaza</h3>
+<div class="skin" onclick="skinAl('red',0)">Kırmızı (Bedava)</div>
+<div class="skin" onclick="skinAl('blue',50)">Mavi (50 coin)</div>
+<div class="skin" onclick="skinAl('green',100)">Yeşil (100 coin)</div>
+</div>
 
-// Kutuya tıklayınca
-kutu.onclick = function() {
-  puan++;
-  document.getElementById("puan").innerText = "Puan: " + puan;
-  hareketEt();
+<script>
+let puan=0,sure=30,hiz=1000,oyun=false;
+let coin = Number(localStorage.getItem("coin")) || 0;
+let rekor = Number(localStorage.getItem("rekor")) || 0;
+let aktifSkin = localStorage.getItem("skin") || "red";
+
+let kutu = document.getElementById("kutu");
+let ses = new Audio("https://www.soundjay.com/button/sounds/button-16.mp3");
+
+document.getElementById("coin").innerText = coin;
+document.getElementById("rekor").innerText = rekor;
+
+kutu.style.background = aktifSkin;
+
+document.getElementById("basla").onclick = () => {
+  puan=0; sure=30; hiz=1000; oyun=true;
+  document.getElementById("basla").style.display="none";
+  baslat();
 };
 
-// Rastgele hareket
-function hareketEt() {
-  let x = Math.random() * (window.innerWidth - 80);
-  let y = Math.random() * (window.innerHeight - 80);
-  kutu.style.left = x + "px";
-  kutu.style.top = y + "px";
+function baslat(){
+  let move = setInterval(()=>{
+    if(!oyun) return;
+    hareket();
+  },hiz);
+
+  let zaman = setInterval(()=>{
+    if(!oyun) return;
+    sure--;
+    document.getElementById("sure").innerText=sure;
+
+    if(hiz>300){
+      hiz-=20;
+      clearInterval(move);
+      move=setInterval(hareket,hiz);
+    }
+
+    if(sure<=0){
+      clearInterval(zaman);
+      clearInterval(move);
+      bitir();
+    }
+
+  },1000);
 }
 
-// Sürekli kaçsın
-setInterval(hareketEt, 1000);
+kutu.onclick = (e)=>{
+  if(!oyun) return;
+  puan++;
+  coin += 2;
+  ses.currentTime=0;
+  ses.play();
 
-hareketEt();
+  document.getElementById("puan").innerText=puan;
+  document.getElementById("coin").innerText=coin;
+
+  hareket();
+};
+
+function hareket(){
+  kutu.style.left = Math.random()*(window.innerWidth-80)+"px";
+  kutu.style.top = Math.random()*(window.innerHeight-80)+"px";
+}
+
+function bitir(){
+  oyun=false;
+
+  localStorage.setItem("coin",coin);
+
+  if(puan>rekor){
+    rekor=puan;
+    localStorage.setItem("rekor",rekor);
+  }
+
+  fakeOnlineScore(puan);
+
+  alert("Bitti! Puan: "+puan);
+  location.reload();
+}
+
+// SKIN
+function skinAl(renk,fiyat){
+  if(coin < fiyat){
+    alert("Yetersiz coin!");
+    return;
+  }
+
+  coin -= fiyat;
+  localStorage.setItem("coin",coin);
+  document.getElementById("coin").innerText=coin;
+
+  aktifSkin = renk;
+  kutu.style.background = renk;
+  localStorage.setItem("skin",renk);
+}
+
+// FAKE ONLINE SCORE
+function fakeOnlineScore(score){
+  let liste = JSON.parse(localStorage.getItem("leader")) || [];
+  liste.push(score);
+  liste.sort((a,b)=>b-a);
+  liste = liste.slice(0,5);
+  localStorage.setItem("leader",JSON.stringify(liste));
+
+  console.log("Leaderboard:",liste);
+}
 </script>
 
 </body>
